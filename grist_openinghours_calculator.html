@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://unpkg.com/opening_hours/opening_hours.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 1em; }
+    table { border-collapse: collapse; }
+    td, th { padding: 0.5em; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h3>Durée hebdomadaire d'ouverture</h3>
+  <table id="results"></table>
+
+  <script>
+    function computeWeeklyHours(ohString) {
+      try {
+        if (ohString.trim() === "24/7") {
+          return 168; // 24h x 7j
+        }
+        const oh = new opening_hours(ohString);
+        const intervals = oh.getOpenIntervals(new Date('2024-01-01'), new Date('2024-01-08'));
+        const totalMs = intervals.reduce((sum, [start, end]) => sum + (end - start), 0);
+        return (totalMs / 1000 / 60 / 60).toFixed(2);
+      } catch (e) {
+        return "Erreur : " + e.message;
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (!data || !data.records) return;
+
+      const table = document.getElementById("results");
+      table.innerHTML = "<tr><th>Ligne</th><th>Horaires</th><th>Heures/sem.</th></tr>";
+
+      data.records.forEach((row, i) => {
+        const horaires = row["service_horaires_ouverture"];
+        const result = computeWeeklyHours(horaires || "");
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i + 1}</td><td>${horaires}</td><td>${result}</td>`;
+        table.appendChild(tr);
+      });
+    });
+
+    window.parent.postMessage({type: "grist", request: "subscribeToRecords"},"*");
+  </script>
+</body>
+</html>
